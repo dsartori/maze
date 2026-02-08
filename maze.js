@@ -24,7 +24,7 @@ function generateMaze(width, height, type = 'dfs') {
         }
     }
 
-    const generators = { prim: generatePrimMaze, ab: generateAbMaze, dfs: generateDfsMaze };
+    const generators = { prim: generatePrimMaze, ab: generateAbMaze, dfs: generateDfsMaze, wilson: generateWilsonMaze };
     generators[type](maze, width, height);
 
     for (let x = 0; x < width; x++) {
@@ -152,16 +152,77 @@ function generateAbMaze(maze, width, height) {
     }
 }
 
+function generateWilsonMaze(maze, width, height) {
+    const totalCells = Math.floor((width - 2) / 2) * Math.floor((height - 2) / 2);
+    let visitedCount = 1;
+    
+    maze[1][1] = 0;
+    
+    const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+    
+    while (visitedCount < totalCells) {
+        let startX = -1, startY = -1;
+        for (let y = 1; y < height - 1 && startX === -1; y += 2) {
+            for (let x = 1; x < width - 1 && startX === -1; x += 2) {
+                if (maze[y][x] === 1) {
+                    startX = x;
+                    startY = y;
+                }
+            }
+        }
+        
+        if (startX === -1) break;
+        
+        let cx = startX, cy = startY;
+        const path = [[cx, cy]];
+        maze[cy][cx] = 2; //  in-path
+        
+        while (maze[cy][cx] !== 0) {
+            const [dx, dy] = directions[Math.floor(Math.random() * directions.length)];
+            cx += dx;
+            cy += dy;
+            
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) {
+                // Step out of bounds
+                cx -= dx;
+                cy -= dy;
+                continue;
+            }
+            
+            if (maze[cy][cx] === 2) {
+                // Loop detected 
+                const loopIdx = path.findIndex(p => p[0] === cx && p[1] === cy);
+                for (let i = path.length - 1; i > loopIdx; i--) {
+                    const [px, py] = path.pop();
+                    maze[py][px] = 1;
+                }
+            } else if (maze[cy][cx] === 0) {
+                path.push([cx, cy]);
+                break;
+            } else {
+                path.push([cx, cy]);
+            }
+        }
+        
+        for (let i = 0; i < path.length - 1; i++) {
+            const [px, py] = path[i];
+            const [nx, ny] = path[i + 1];
+            maze[py][px] = 0;
+            maze[py + (ny - py) / 2][px + (nx - px) / 2] = 0;
+            visitedCount++;
+        }
+        maze[path[path.length - 1][1]][path[path.length - 1][0]] = 0;
+    }
+}
+
 function getRandomStartEnd(maze, minDistance) {
     const spaces = getMazeSpaces(maze);
     
-    // Filter to only valid start points (have at least one partner far enough)
     const validStartPoints = spaces.filter(start => {
         return spaces.some(end => manhattanDistance(start[0], start[1], end[0], end[1]) >= minDistance);
     });
     
     if (validStartPoints.length === 0) {
-        // Fallback to default positions
         return { start: [1, 1], end: [maze[0].length - 2, maze.length - 2] };
     }
     
@@ -169,7 +230,6 @@ function getRandomStartEnd(maze, minDistance) {
     const startX = startPos[0];
     const startY = startPos[1];
     
-    // Find valid end positions for this start
     const validEndPoints = spaces.filter(end =>
         manhattanDistance(startX, startY, end[0], end[1]) >= minDistance
     );
@@ -179,6 +239,5 @@ function getRandomStartEnd(maze, minDistance) {
         return { start: [startX, startY], end: [endPos[0], endPos[1]] };
     }
     
-    // Fallback
     return { start: [startX, startY], end: [maze[0].length - 2, maze.length - 2] };
 }
