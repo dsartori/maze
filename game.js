@@ -6,11 +6,26 @@ class MainScene extends Phaser.Scene {
     preload() {}
 
     create() {
-        const mazeWidth = 23;
-        const mazeHeight = 23;
-        const mazeType = 'prim';
+
+        
+        const urlParams = new URLSearchParams(window.location.search);
+
+        const mazeSize = urlParams.get('size') || '100';
+        const mazeType = urlParams.get('maze') || 'dfs';
+
+        console.log(`MAZE\nDoug Sartori, Windsor Ontario\nGenerating ${mazeSize}x${mazeSize} maze using ${mazeType} algorithm`);
+        
+        const mazeWidth = parseInt(mazeSize, 10);
+        const mazeHeight = parseInt(mazeSize, 10);
         const maze = generateMaze(mazeWidth, mazeHeight, mazeType);
         this.maze = maze;
+
+        const minDistance = 25;
+        const positions = getRandomStartEnd(maze, minDistance);
+        const startX = positions.start[0];
+        const startY = positions.start[1];
+        const endX = positions.end[0];
+        const endY = positions.end[1];
 
         const targetCellsWide = 5;
         const targetCellsHigh = 5;
@@ -24,9 +39,6 @@ class MainScene extends Phaser.Scene {
         const baseZoom = cellSize / 32;
         const zoom = Phaser.Math.Clamp(baseZoom, 1.0, 2.0);
 
-        const endX = maze[0].length - 2;
-        const endY = maze.length - 2;
-
         this.walls = this.physics.add.staticGroup();
         for (let y = 0; y < maze.length; y++) {
             for (let x = 0; x < maze[y].length; x++) {
@@ -37,8 +49,8 @@ class MainScene extends Phaser.Scene {
             }
         }
 
-        const playerX = cellSize + 16;
-        const playerY = cellSize + 16;
+        const playerX = startX * cellSize + cellSize / 2;
+        const playerY = startY * cellSize + cellSize / 2;
         this.player = this.add.circle(playerX, playerY, 8, 0xe74c3c);
         this.physics.add.existing(this.player);
         this.player.body.setSize(16, 16).setCollideWorldBounds(false).setBounce(0).setFriction(0.95);

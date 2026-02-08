@@ -1,3 +1,19 @@
+function getMazeSpaces(maze){
+    const spaces = [];
+    for (let y = 0; y < maze.length; y++) {
+        for (let x = 0; x < maze[y].length; x++) {
+            if (maze[y][x] === 0) {
+                spaces.push([x, y]);
+            }
+        }
+    }
+    return spaces;
+}
+
+function manhattanDistance(x1, y1, x2, y2) {
+    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+}
+
 function generateMaze(width, height, type = 'dfs') {
     const maze = [];
 
@@ -8,10 +24,16 @@ function generateMaze(width, height, type = 'dfs') {
         }
     }
 
-    if (type === 'prim') {
-        generatePrimMaze(maze, width, height);
-    } else {
-        generateDfsMaze(maze, width, height);
+    const generators = { prim: generatePrimMaze, ab: generateAbMaze, dfs: generateDfsMaze };
+    generators[type](maze, width, height);
+
+    for (let x = 0; x < width; x++) {
+        maze[0][x] = 1;
+        maze[height - 1][x] = 1;
+    }
+    for (let y = 0; y < height; y++) {
+        maze[y][0] = 1;
+        maze[y][width - 1] = 1;
     }
 
     return maze;
@@ -91,4 +113,72 @@ function generatePrimMaze(maze, width, height) {
             }
         }
     }
+}
+
+function generateAbMaze(maze, width, height) {
+    let cx = Math.floor(Math.random() * ((width - 1) / 2)) * 2 + 1;
+    let cy = Math.floor(Math.random() * ((height - 1) / 2)) * 2 + 1;
+    
+    maze[cy][cx] = 0;
+
+    const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+
+    let totalCells = 0;
+    for (let y = 1; y < height - 1; y += 2) {
+        for (let x = 1; x < width - 1; x += 2) {
+            totalCells++;
+        }
+    }
+
+    let visitedCount = 1;
+
+    while (visitedCount < totalCells) {
+        const [dx, dy] = directions[Math.floor(Math.random() * directions.length)];
+        const nx = cx + dx;
+        const ny = cy + dy;
+
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            if (maze[ny][nx] === 1) {
+                maze[cy + dy / 2][cx + dx / 2] = 0;
+                maze[ny][nx] = 0;
+                cx = nx;
+                cy = ny;
+                visitedCount++;
+            } else {
+                cx = nx;
+                cy = ny;
+            }
+        }
+    }
+}
+
+function getRandomStartEnd(maze, minDistance) {
+    const spaces = getMazeSpaces(maze);
+    
+    // Filter to only valid start points (have at least one partner far enough)
+    const validStartPoints = spaces.filter(start => {
+        return spaces.some(end => manhattanDistance(start[0], start[1], end[0], end[1]) >= minDistance);
+    });
+    
+    if (validStartPoints.length === 0) {
+        // Fallback to default positions
+        return { start: [1, 1], end: [maze[0].length - 2, maze.length - 2] };
+    }
+    
+    const startPos = validStartPoints[Math.floor(Math.random() * validStartPoints.length)];
+    const startX = startPos[0];
+    const startY = startPos[1];
+    
+    // Find valid end positions for this start
+    const validEndPoints = spaces.filter(end =>
+        manhattanDistance(startX, startY, end[0], end[1]) >= minDistance
+    );
+    
+    if (validEndPoints.length > 0) {
+        const endPos = validEndPoints[Math.floor(Math.random() * validEndPoints.length)];
+        return { start: [startX, startY], end: [endPos[0], endPos[1]] };
+    }
+    
+    // Fallback
+    return { start: [startX, startY], end: [maze[0].length - 2, maze.length - 2] };
 }
