@@ -6,6 +6,19 @@ class MainScene extends Phaser.Scene {
     preload() {}
 
     create() {
+        const positionText = (x, y, text) => {
+            const textObject = this.add.text(x, y, text, {
+                fontSize: '10px',
+                fill: '#ffffff'
+            }).setOrigin(1, 1);
+            const cam = this.cameras.main;
+    
+            textObject.setPosition(
+                Phaser.Math.Clamp(x, textObject.width, cam.scrollX + (this.scale.width / cam.zoom)),
+                Phaser.Math.Clamp(y, textObject.height, cam.scrollY + (this.scale.height / cam.zoom))
+            );
+            return textObject;
+        };
 
         
         const urlParams = new URLSearchParams(window.location.search);
@@ -20,7 +33,7 @@ class MainScene extends Phaser.Scene {
         const maze = generateMaze(mazeWidth, mazeHeight, mazeType);
         this.maze = maze;
 
-        const minDistance = 25;
+        const minDistance = (mazeSize / 4);
         const positions = getRandomStartEnd(maze, minDistance);
         const startX = positions.start[0];
         const startY = positions.start[1];
@@ -76,19 +89,9 @@ class MainScene extends Phaser.Scene {
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT
         });
 
-        const winTextX = mazePixelWidth - 30;
-        const winTextY = mazePixelHeight - 20;
-        this.winText = this.add.text(winTextX, winTextY, 'You Win!\nPress R to restart', {
-            fontSize: '10px',
-            fill: '#ffffff'
-        }).setOrigin(1, 1);
+        this.winText = positionText(exitX, exitY - cellSize, 'You Win!\nPress R to restart');
         
-        const instructionsX = playerX + cellSize * 2;
-        const instructionsY = playerY - cellSize;
-        this.instructions = this.add.text(instructionsX, instructionsY, 'Explore the ' + mazeType + ' maze\nUse arrow keys to move\nReach the green square', {
-            fontSize: '10px',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
+        this.instructions = positionText(playerX, playerY - cellSize, 'Explore the ' + mazeType + ' maze\nUse arrow keys to move\nReach the green square');
 
         this.input.keyboard.on('keydown-R', () => {
             if (this.win) this.scene.restart();
