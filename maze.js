@@ -153,80 +153,92 @@ function generateAbMaze(maze, width, height) {
 }
 
 function generateWilsonMaze(maze, width, height) {
-    const totalCells = Math.floor((width - 2) / 2) * Math.floor((height - 2) / 2);
-    let visitedCount = 1;
+    const backbone = new Set();
     
-    maze[1][1] = 0;
+    let sx = Math.floor(Math.random() * ((width - 1) / 2)) * 2 + 1;
+    let sy = Math.floor(Math.random() * ((height - 1) / 2)) * 2 + 1;
+    maze[sy][sx] = 0;
+    backbone.add(`${sx},${sy}`);
     
     const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
     
-    while (visitedCount < totalCells) {
-        let startX = -1, startY = -1;
-        for (let y = 1; y < height - 1 && startX === -1; y += 2) {
-            for (let x = 1; x < width - 1 && startX === -1; x += 2) {
-                if (maze[y][x] === 1) {
-                    startX = x;
-                    startY = y;
-                }
-            }
+    let totalCells = 0;
+    for (let y = 1; y < height - 1; y += 2) {
+        for (let x = 1; x < width - 1; x += 2) {
+            totalCells++;
         }
+    }
+    
+    while (backbone.size < totalCells) {
+        let ux, uy;
+        do {
+            ux = Math.floor(Math.random() * ((width - 1) / 2)) * 2 + 1;
+            uy = Math.floor(Math.random() * ((height - 1) / 2)) * 2 + 1;
+        } while (backbone.has(`${ux},${uy}`));
         
-        if (startX === -1) break;
+        const path = [[ux, uy]];
+        let cx = ux, cy = uy;
         
-        let cx = startX, cy = startY;
-        const path = [[cx, cy]];
-        maze[cy][cx] = 2; //  in-path
-        
-        while (maze[cy][cx] !== 0) {
-            const [dx, dy] = directions[Math.floor(Math.random() * directions.length)];
-            cx += dx;
-            cy += dy;
-            
-            if (cx < 0 || cx >= width || cy < 0 || cy >= height) {
-                // Step out of bounds
-                cx -= dx;
-                cy -= dy;
-                continue;
+        while (true) {
+            let validDirection = false;
+            let attempts = 0;
+            while (!validDirection && attempts < 100) {
+                const [dx, dy] = directions[Math.floor(Math.random() * directions.length)];
+                const nx = cx + dx;
+                const ny = cy + dy;
+                
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                    cx = nx;
+                    cy = ny;
+                    validDirection = true;
+                }
+                attempts++;
             }
             
-            if (maze[cy][cx] === 2) {
-                // Loop detected 
-                const loopIdx = path.findIndex(p => p[0] === cx && p[1] === cy);
-                for (let i = path.length - 1; i > loopIdx; i--) {
-                    const [px, py] = path.pop();
-                    maze[py][px] = 1;
-                }
-            } else if (maze[cy][cx] === 0) {
-                path.push([cx, cy]);
+            if (backbone.has(`${cx},${cy}`)) {
                 break;
+            }
+            
+            const loopIdx = path.findIndex(p => p[0] === cx && p[1] === cy);
+            
+            if (loopIdx >= 0) {
+                path.length = loopIdx + 1;
             } else {
                 path.push([cx, cy]);
             }
         }
         
-        for (let i = 0; i < path.length - 1; i++) {
+        for (let i = 0; i < path.length; i++) {
             const [px, py] = path[i];
-            const [nx, ny] = path[i + 1];
             maze[py][px] = 0;
-            maze[py + (ny - py) / 2][px + (nx - px) / 2] = 0;
-            visitedCount++;
+            backbone.add(`${px},${py}`);
+            
+            if (i < path.length - 1) {
+                const [nx, ny] = path[i + 1];
+                maze[(py + ny) / 2][(px + nx) / 2] = 0;
+            }
         }
-        maze[path[path.length - 1][1]][path[path.length - 1][0]] = 0;
+        
+        const [fx, fy] = path[path.length - 1];
+        const [lx, ly] = [cx, cy];
+        
+        if (!(path.length > 0 && path[path.length - 1][0] === lx && path[path.length - 1][1] === ly)) {
+            const connX = (fx + lx) / 2;
+            const connY = (fy + ly) / 2;
+            maze[connY][connX] = 0;
+        } 
+        
     }
 }
 
 function getRandomStartEnd(maze, minDistance) {
     const spaces = getMazeSpaces(maze);
     
-    const validStartPoints = spaces.filter(start => {
-        return spaces.some(end => manhattanDistance(start[0], start[1], end[0], end[1]) >= minDistance);
-    });
-    
-    if (validStartPoints.length === 0) {
+    if (spaces.length < 2) {
         return { start: [1, 1], end: [maze[0].length - 2, maze.length - 2] };
     }
     
-    const startPos = validStartPoints[Math.floor(Math.random() * validStartPoints.length)];
+    const startPos = spaces[Math.floor(Math.random() * spaces.length)];
     const startX = startPos[0];
     const startY = startPos[1];
     
@@ -238,6 +250,6 @@ function getRandomStartEnd(maze, minDistance) {
         const endPos = validEndPoints[Math.floor(Math.random() * validEndPoints.length)];
         return { start: [startX, startY], end: [endPos[0], endPos[1]] };
     }
-    
-    return { start: [startX, startY], end: [maze[0].length - 2, maze.length - 2] };
+
+    return { start: [1, 1], end: [maze[0].length - 2, maze.length - 2] };
 }

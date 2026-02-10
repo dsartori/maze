@@ -18,7 +18,8 @@ Specify maze type and size via URL parameter: `?maze=prim&size=25`.
 ### Maze Types
 - `?maze=dfs` (default). **Depth-First Search**. Recursive backtracker algorithm
 - `?maze=prim` **Prim's Algorithm**. Randomized Prim's
-- `?maze=ab` **Aldous-Broder**. Aldous-Broder maze algorithm
+- `?maze=ab` **Aldous-Broder**. Simple maze algorithm 
+- `?maze=wilson` **Wilson's Algorithm**. Loop-erased random walks 
 
 ## Controls
 
